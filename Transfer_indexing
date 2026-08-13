@@ -1,0 +1,168 @@
+from dataclasses import dataclass
+from collections import defaultdict
+
+@dataclass
+class Account:
+    id: int
+    name: str
+    balance: float = 0.0
+
+@dataclass
+class Transaction:
+    type: str
+    amount: float
+    other: int = 0
+
+class Ledger:
+    def __init__(self):
+        self.accounts = {}
+        self.history = defaultdict(list)
+        self.customer_index = defaultdict(list)
+        self.next_id = 1
+
+    def create(self, name, balance):
+        acc = Account(self.next_id, name, balance)
+        self.accounts[self.next_id] = acc
+        self.customer_index[name].append(self.next_id)
+        self.next_id += 1
+        print("Account Created. ID:", acc.id)
+
+    def deposit(self, acc_id, amount):
+        if acc_id not in self.accounts:
+            print("Account Not Found")
+            return
+        if amount <= 0:
+            print("Invalid Amount")
+            return
+
+        self.accounts[acc_id].balance += amount
+        self.history[acc_id].append(Transaction("deposit", amount))
+        print("Deposit Successful")
+
+    def withdraw(self, acc_id, amount):
+        if acc_id not in self.accounts:
+            print("Account Not Found")
+            return
+        if amount <= 0:
+            print("Invalid Amount")
+            return
+        if self.accounts[acc_id].balance < amount:
+            print("Insufficient Balance")
+            return
+
+        self.accounts[acc_id].balance -= amount
+        self.history[acc_id].append(Transaction("withdraw", amount))
+        print("Withdrawal Successful")
+
+    def transfer(self, from_id, to_id, amount):
+        if from_id not in self.accounts or to_id not in self.accounts:
+            print("Account Not Found")
+            return
+        if amount <= 0:
+            print("Invalid Amount")
+            return
+        if self.accounts[from_id].balance < amount:
+            print("Insufficient Balance")
+            return
+
+        self.accounts[from_id].balance -= amount
+        self.accounts[to_id].balance += amount
+
+        self.history[from_id].append(Transaction("transfer_out", amount, to_id))
+        self.history[to_id].append(Transaction("transfer_in", amount, from_id))
+
+        print("Transfer Successful")
+
+    def reverse_last(self, acc_id):
+        if acc_id not in self.accounts:
+            print("Account Not Found")
+            return
+        if not self.history[acc_id]:
+            print("No Transaction")
+            return
+
+        t = self.history[acc_id].pop()
+
+        if t.type == "deposit":
+            self.accounts[acc_id].balance -= t.amount
+
+        elif t.type == "withdraw":
+            self.accounts[acc_id].balance += t.amount
+
+        elif t.type == "transfer_out":
+            self.accounts[acc_id].balance += t.amount
+            self.accounts[t.other].balance -= t.amount
+            if self.history[t.other]:
+                self.history[t.other].pop()
+
+        print("Last Transaction Reversed")
+
+    def search_customer(self, name):
+        ids = self.customer_index.get(name, [])
+        if not ids:
+            print("Customer Not Found")
+            return
+
+        for i in ids:
+            a = self.accounts[i]
+            print(a.id, a.name, "₹", a.balance)
+
+    def list_accounts(self):
+        if not self.accounts:
+            print("No Accounts Available")
+            return
+
+        for a in self.accounts.values():
+            print(a.id, a.name, "₹", a.balance)
+
+
+ledger = Ledger()
+
+while True:
+    print("\n1.Create 2.Deposit 3.Withdraw 4.Transfer 5.Reverse 6.Search 7.List 0.Exit")
+
+    ch = input("Choice: ")
+
+    if ch == "1":
+        name = input("Customer Name: ")
+        bal = float(input("Opening Balance: "))
+        ledger.create(name, bal)
+
+    elif ch == "2":
+        ledger.deposit(
+            int(input("Account ID: ")),
+            float(input("Amount: "))
+        )
+
+    elif ch == "3":
+        ledger.withdraw(
+            int(input("Account ID: ")),
+            float(input("Amount: "))
+        )
+
+    elif ch == "4":
+        ledger.transfer(
+            int(input("From Account ID: ")),
+            int(input("To Account ID: ")),
+            float(input("Amount: "))
+        )
+
+    elif ch == "5":
+        ledger.reverse_last(
+            int(input("Account ID: "))
+        )
+
+    elif ch == "6":
+        ledger.search_customer(
+            input("Customer Name: ")
+        )
+
+    elif ch == "7":
+        ledger.list_accounts()
+
+    elif ch == "0":
+        print("Thank You")
+        break
+
+    else:
+        print("Invalid Choice")
