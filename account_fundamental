@@ -1,0 +1,97 @@
+from dataclasses import dataclass
+
+class AccountNotFoundError(Exception):
+    pass
+
+class InsufficientFundsError(Exception):
+    pass
+
+class InvalidAmountError(Exception):
+    pass
+
+@dataclass
+class Account:
+    id: int
+    name: str
+    balance: float = 0.0
+
+class Ledger:
+    def __init__(self):
+        self.accounts = {}
+        self.next_id = 1
+
+    def get(self, acc_id):
+        if acc_id not in self.accounts:
+            raise AccountNotFoundError("Account not found")
+        return self.accounts[acc_id]
+
+    def create(self, name, balance):
+        if balance < 0:
+            raise InvalidAmountError("Invalid amount")
+        acc = Account(self.next_id, name, balance)
+        self.accounts[self.next_id] = acc
+        self.next_id += 1
+
+    def deposit(self, acc_id, amount):
+        if amount <= 0:
+            raise InvalidAmountError("Invalid amount")
+        self.get(acc_id).balance += amount
+
+    def withdraw(self, acc_id, amount):
+        acc = self.get(acc_id)
+        if amount <= 0:
+            raise InvalidAmountError("Invalid amount")
+        if amount > acc.balance:
+            raise InsufficientFundsError("Insufficient balance")
+        acc.balance -= amount
+
+    def balance(self, acc_id):
+        return self.get(acc_id).balance
+
+    def close(self, acc_id):
+        del self.accounts[acc_id]
+
+    def list_accounts(self):
+        return self.accounts.values()
+
+ledger = Ledger()
+
+while True:
+    print("\n1.Create 2.Deposit 3.Withdraw 4.Balance 5.Close 6.List 0.Exit")
+    ch = input("Choice: ")
+
+    try:
+        if ch == "1":
+            name = input("Name: ")
+            bal = float(input("Opening Balance: "))
+            ledger.create(name, bal)
+            print("Account Created")
+
+        elif ch == "2":
+            ledger.deposit(int(input("ID: ")), float(input("Amount: ")))
+            print("Deposit Successful")
+
+        elif ch == "3":
+            ledger.withdraw(int(input("ID: ")), float(input("Amount: ")))
+            print("Withdrawal Successful")
+
+        elif ch == "4":
+            print("Balance: ₹", ledger.balance(int(input("ID: "))))
+
+        elif ch == "5":
+            ledger.close(int(input("ID: ")))
+            print("Account Closed")
+
+        elif ch == "6":
+            for a in ledger.list_accounts():
+                print(a.id, a.name, "₹", a.balance)
+
+        elif ch == "0":
+            print("Thank You")
+            break
+
+        else:
+            print("Invalid Choice")
+
+    except Exception as e:
+        print(e)
